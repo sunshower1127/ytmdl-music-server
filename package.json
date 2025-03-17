@@ -11,5 +11,8 @@
   "description": "",
   "devDependencies": {
     "@vercel/node": "^5.1.14"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.758.0"
   }
 }

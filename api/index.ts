@@ -1,17 +1,36 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
+import { fetchMusic } from "../s3-store";
 
 export default async (request: VercelRequest, response: VercelResponse) => {
-  try {
-    request.body = JSON.parse(request.body);
+  // CORS 헤더 추가
+  response.setHeader("Access-Control-Allow-Origin", "*"); // 모든 도메인 허용, 필요시 특정 도메인으로 제한
+  response.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  response.setHeader("Access-Control-Allow-Headers", "Content-Type, If-None-Match");
 
-    // 응답 반환
-    response.status(200).json({
-      success: true,
+  // OPTIONS 요청 처리 (프리플라이트 요청)
+  if (request.method === "OPTIONS") {
+    return response.status(200).end();
+  }
+
+  const { author, title } = request.query;
+  if (!(author && typeof author === "string" && title && typeof title === "string")) {
+    return response.status(400).json({
+      error: "파라미터 오류",
+      author,
+      title,
     });
-  } catch (error) {
-    response.status(500).json({
-      success: false,
-      error: error.message,
-    });
+  }
+
+  const { status, biteArray, etag, errorMessage } = await fetchMusic(author, title, request.headers["if-none-match"]);
+  // 응답 반환
+  if (status === 200) {
+    response.setHeader("ETag", etag!);
+    response.setHeader("Content-Type", "audio/webm");
+    response.setHeader("Cache-Control", "public, max-age=3600, immutable");
+    response.status(200).send(biteArray);
+  } else if (status === 304) {
+    response.status(304).end();
+  } else {
+    response.status(status).json({ error: errorMessage });
   }
 };
