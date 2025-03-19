@@ -12,10 +12,10 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     return response.status(200).end();
   }
 
-  const { status, musicList: musicByArtist } = await getMusicList();
+  const { status, musicList } = await getMusicList();
 
   if (status === 200) {
-    response.status(200).send(musicByArtist);
+    response.status(200).send(musicList);
   } else if (status === 304) {
     response.status(304).end();
   } else {
