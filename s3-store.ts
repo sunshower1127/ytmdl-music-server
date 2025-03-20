@@ -1,4 +1,4 @@
-import { GetObjectCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, HeadObjectCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
 
 if (!process.env.ACCESS_KEY || !process.env.SECRET_KEY || !process.env.BUCKET_NAME || !process.env.ENDPOINT_URL) {
   throw new Error("환경 변수가 설정되지 않았습니다.");
@@ -67,18 +67,27 @@ export async function getMusicList() {
         const key = content.Key;
         if (!key) return null;
 
-        // author/title.webm 형식에서 분리
-        const match = key.match(/^([^/]+)\/(.+)\.webm$/);
+        // author/title.webp 형식에서 분리
+        const match = key.match(/^([^/]+)\/(.+)\.webp$/);
         if (!match) return null;
         const [, author, title] = match;
 
-        return { author, title };
+        // metadata에서 colorcode 조회
+        const headResponse = await s3.send(
+          new HeadObjectCommand({
+            Bucket: process.env.BUCKET_NAME,
+            Key: key,
+          })
+        );
+        const thumbnailColorcode = headResponse.Metadata?.colorcode || null;
+
+        return { author, title, thumbnailColorcode };
       })
     );
 
     return {
       status: response.$metadata.httpStatusCode,
-      musicList: musicList.filter(Boolean), // undefined/null 제거
+      musicList: musicList.filter(Boolean),
     };
   } catch (error: any) {
     console.error("음악 파일 목록 가져오기 실패:", error);
