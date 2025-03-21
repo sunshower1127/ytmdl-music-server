@@ -72,16 +72,29 @@ export async function getMusicList() {
         if (!match) return null;
         const [, author, title] = match;
 
-        // metadata에서 colorcode 조회
-        const headResponse = await s3.send(
+        // thumbnail에서 colorcode 조회
+        const thumbnailHeadResponse = await s3.send(
           new HeadObjectCommand({
             Bucket: process.env.BUCKET_NAME,
             Key: key,
           })
         );
-        const thumbnailColorcode = headResponse.Metadata?.colorcode || null;
+        const thumbnailColorcode = thumbnailHeadResponse.Metadata?.colorcode || null;
 
-        return { author, title, thumbnailColorcode };
+        // 음악 파일에서 emotion과 energy 값 조회
+        const musicKey = `${author}/${title}.webm`;
+        const musicHeadResponse = await s3.send(
+          new HeadObjectCommand({
+            Bucket: process.env.BUCKET_NAME,
+            Key: musicKey,
+          })
+        );
+        const musicValue = {
+          emotion: +(musicHeadResponse.Metadata?.emotion || 0),
+          energy: +(musicHeadResponse.Metadata?.energy || 0),
+        };
+
+        return { author, title, thumbnailColorcode, musicValue };
       })
     );
 
