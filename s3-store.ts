@@ -14,9 +14,9 @@ const s3 = new S3Client({
   },
 });
 
-export async function fetchMusic(author: string, title: string, eTag?: string) {
+export async function fetchMusic(artist: string, title: string, eTag?: string) {
   try {
-    const key = `${author}/${title}.webm`;
+    const key = `${artist}/${title}.mp4`;
     const command = new GetObjectCommand({
       Bucket: process.env.BUCKET_NAME,
       Key: key,
@@ -34,9 +34,9 @@ export async function fetchMusic(author: string, title: string, eTag?: string) {
   }
 }
 
-export async function fetchThumbnail(author: string, title: string, eTag?: string) {
+export async function fetchThumbnail(artist: string, title: string, eTag?: string) {
   try {
-    const key = `${author}/${title}.webp`;
+    const key = `${artist}/${title}.webp`;
     const command = new GetObjectCommand({
       Bucket: process.env.BUCKET_NAME,
       Key: key,
@@ -53,7 +53,6 @@ export async function fetchThumbnail(author: string, title: string, eTag?: strin
     return { status: error.$metadata?.httpStatusCode, errorMessage: error.message };
   }
 }
-
 export async function getMusicList() {
   try {
     const response = await s3.send(
@@ -67,43 +66,36 @@ export async function getMusicList() {
         const key = content.Key;
         if (!key) return null;
 
-        // author/title.webp 형식에서 분리
-        const match = key.match(/^([^/]+)\/(.+)\.webp$/);
+        // artist/title.mp4 형식에서 분리
+        const match = key.match(/^([^/]+)\/(.+)\.mp4$/);
         if (!match) return null;
-        const [, author, title] = match;
+        const [, artist, title] = match;
 
-        // thumbnail에서 colorcode 조회
-        const thumbnailHeadResponse = await s3.send(
+        // mp4 파일에 대한 head 객체를 가져와 metadata 조회
+        const headResponse = await s3.send(
           new HeadObjectCommand({
             Bucket: process.env.BUCKET_NAME,
             Key: key,
           })
         );
-        const thumbnailColorcode = thumbnailHeadResponse.Metadata?.colorcode || null;
+        let metadata: Record<string, any> = headResponse.Metadata || {};
 
-        // 음악 파일에서 emotion과 energy 값 조회
-        const musicKey = `${author}/${title}.webm`;
-        const musicHeadResponse = await s3.send(
-          new HeadObjectCommand({
-            Bucket: process.env.BUCKET_NAME,
-            Key: musicKey,
+        metadata = Object.fromEntries(
+          Object.entries(metadata).map(([key, value]) => {
+            const num = Number(value);
+            return [key, isNaN(num) ? value : num];
           })
         );
-        const musicValue = {
-          emotion: +(musicHeadResponse.Metadata?.emotion || 0),
-          energy: +(musicHeadResponse.Metadata?.energy || 0),
-        };
 
-        return { author, title, thumbnailColorcode, musicValue };
+        return { artist, title, metadata };
       })
     );
-
     return {
       status: response.$metadata.httpStatusCode,
       musicList: musicList.filter(Boolean),
     };
   } catch (error: any) {
-    console.error("음악 파일 목록 가져오기 실패:", error);
+    console.error("mp4 파일 목록 가져오기 실패:", error);
     return { status: error.$metadata?.httpStatusCode || 500 };
   }
 }

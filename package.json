@@ -10,7 +10,8 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "@vercel/node": "^5.1.14"
+    "@vercel/node": "^5.1.14",
+    "dotenv": "^16.4.7"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.758.0",
