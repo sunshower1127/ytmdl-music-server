@@ -82,6 +82,9 @@ export async function getMusicList() {
 
         metadata = Object.fromEntries(
           Object.entries(metadata).map(([key, value]) => {
+            // 스네이크 케이스를 카멜 케이스로 변환
+            key = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+
             const num = Number(value);
             return [key, isNaN(num) ? value : num];
           })
