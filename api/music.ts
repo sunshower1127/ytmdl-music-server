@@ -26,7 +26,7 @@ export default async (request: VercelRequest, response: VercelResponse) => {
   if (status === 200) {
     response.setHeader("ETag", etag!);
     response.setHeader("Content-Type", "audio/mp4");
-    response.setHeader("Cache-Control", "public, max-age=604800, immutable");
+    response.setHeader("Cache-Control", "public, max-age=0, immutable");
     response.status(200).send(body);
     // } else if (status === 206) {
     //   response.setHeader("ETag", etag!);
