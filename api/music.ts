@@ -1,4 +1,5 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
+import { Readable } from "stream";
 import { fetchMusic } from "../s3-store";
 
 export default async (request: VercelRequest, response: VercelResponse) => {
@@ -21,18 +22,16 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     });
   }
 
-  const { status, body, etag, errorMessage } = await fetchMusic(artist, title, request.headers["if-none-match"]);
+  const { status, body, etag, errorMessage, length } = await fetchMusic(artist, title, request.headers["if-none-match"]);
   // 응답 반환
-  if (status === 200) {
+  if (status === 200 && body) {
     response.setHeader("ETag", etag!);
     response.setHeader("Content-Type", "audio/mp4");
-    response.setHeader("Cache-Control", "public, max-age=0, immutable");
-    response.status(200).send(body);
-    // } else if (status === 206) {
-    //   response.setHeader("ETag", etag!);
-    //   response.setHeader("Content-Type", "audio/webm");
-    //   // 필요시 Content-Range 헤더 추가 가능
-    //   response.status(206).send(body);
+    response.setHeader("Cache-Control", "public, max-age=2592000, immutable"); // 1달 캐싱
+    response.setHeader("Content-Length", length!);
+
+    const stream = Readable.fromWeb(body as any);
+    stream.pipe(response);
   } else if (status === 304) {
     response.status(304).end();
   } else {

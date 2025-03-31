@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@types/node": "^22.13.14",
     "@vercel/node": "^5.1.14",
     "dotenv": "^16.4.7"
   },

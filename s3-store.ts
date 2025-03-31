@@ -26,8 +26,9 @@ export async function fetchMusic(artist: string, title: string, eTag?: string) {
     const response = await s3.send(command);
     return {
       status: response.$metadata.httpStatusCode,
-      body: Buffer.from(await response.Body!.transformToByteArray()),
+      body: response.Body!.transformToWebStream(),
       etag: response.ETag,
+      length: response.ContentLength,
     };
   } catch (error: any) {
     return { status: error.$metadata?.httpStatusCode, errorMessage: error.message };
@@ -46,8 +47,9 @@ export async function fetchThumbnail(artist: string, title: string, eTag?: strin
     const response = await s3.send(command);
     return {
       status: response.$metadata.httpStatusCode,
-      body: Buffer.from(await response.Body!.transformToByteArray()),
+      body: response.Body!.transformToWebStream(),
       etag: response.ETag,
+      length: response.ContentLength,
     };
   } catch (error: any) {
     return { status: error.$metadata?.httpStatusCode, errorMessage: error.message };
