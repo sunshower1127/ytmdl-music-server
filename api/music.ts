@@ -1,12 +1,11 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
-import { Readable } from "stream";
-import { fetchMusic } from "../s3-store";
+import { getSignedMusicUrl } from "../s3-store";
 
 export default async (request: VercelRequest, response: VercelResponse) => {
   // CORS 헤더 추가
   response.setHeader("Access-Control-Allow-Origin", "*"); // 모든 도메인 허용, 필요시 특정 도메인으로 제한
   response.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-  response.setHeader("Access-Control-Allow-Headers", "Content-Type, If-None-Match");
+  response.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   // OPTIONS 요청 처리 (프리플라이트 요청)
   if (request.method === "OPTIONS") {
@@ -22,19 +21,13 @@ export default async (request: VercelRequest, response: VercelResponse) => {
     });
   }
 
-  const { status, body, etag, errorMessage, length } = await fetchMusic(artist, title, request.headers["if-none-match"]);
-  // 응답 반환
-  if (status === 200 && body) {
-    response.setHeader("ETag", etag!);
-    response.setHeader("Content-Type", "audio/mp4");
-    response.setHeader("Cache-Control", "public, max-age=2592000, immutable"); // 1달 캐싱
-    response.setHeader("Content-Length", length!);
+  // 서명된 URL 생성
+  const { status, url, expiresIn, errorMessage } = await getSignedMusicUrl(artist, title);
 
-    const stream = Readable.fromWeb(body as any);
-    stream.pipe(response);
-  } else if (status === 304) {
-    response.status(304).end();
+  if (status === 200 && url) {
+    // 서명된 URL로 리다이렉트
+    return response.redirect(302, url);
   } else {
-    response.status(status).json({ error: errorMessage });
+    return response.status(status).json({ error: errorMessage });
   }
 };
